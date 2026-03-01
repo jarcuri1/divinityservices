@@ -483,15 +483,16 @@
   /* ── Defaults ── */
   const DEFAULTS = {
     home:    '370 Leonard Road, Middlebury, Connecticut 06762',
-    range:   'Sheet1!A:A',
+    sheetid: '183LTxxMl53RbPeSwG8qpUhNmzfciS2V4EnTMXygQnAc',
+    range:   'Snow Removal!A2:A100',
   };
 
   /* ── Init ── */
   function init() {
-    document.getElementById('s-home').value    = LS.get('home', DEFAULTS.home);
-    document.getElementById('s-apikey').value  = LS.get('apikey');
-    document.getElementById('s-sheetid').value = LS.get('sheetid');
-    document.getElementById('s-range').value   = LS.get('range', DEFAULTS.range);
+    document.getElementById('s-home').value    = LS.get('home',    DEFAULTS.home);
+    document.getElementById('s-apikey').value  = LS.get('apikey',  'AIzaSyBKAR2zRP6uWAwFYuzuhlK6hCua_CGlnf0');
+    document.getElementById('s-sheetid').value = LS.get('sheetid', DEFAULTS.sheetid);
+    document.getElementById('s-range').value   = LS.get('range',   DEFAULTS.range);
 
     updateHomeDisplay();
     updateProgress();
