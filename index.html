@@ -549,14 +549,13 @@
   ══════════════════════════════════════ */
   async function geocodeAddress(address, orsKey, homeCoord) {
     try {
-      // Restrict results to a bounding box covering Connecticut + small buffer
-      // min_lon, min_lat, max_lon, max_lat
-      const CT_BBOX = { minLat: 40.95, maxLat: 42.10, minLng: -73.80, maxLng: -71.75 };
+      // Restrict results to a 30km circle around home — excludes far towns like Glastonbury
+      // while covering all nearby towns (Watertown, Woodbury, Naugatuck, etc.)
+      const RADIUS_M = 30000;
       let url = `https://api.openrouteservice.org/geocode/search?api_key=${orsKey}&text=${encodeURIComponent(address)}&boundary.country=US&size=3`;
-      url += `&boundary.rect.min_lat=${CT_BBOX.minLat}&boundary.rect.max_lat=${CT_BBOX.maxLat}`;
-      url += `&boundary.rect.min_lon=${CT_BBOX.minLng}&boundary.rect.max_lon=${CT_BBOX.maxLng}`;
       if (homeCoord) {
         url += `&focus.point.lat=${homeCoord.lat}&focus.point.lon=${homeCoord.lng}`;
+        url += `&boundary.circle.lat=${homeCoord.lat}&boundary.circle.lon=${homeCoord.lng}&boundary.circle.radius=${RADIUS_M}`;
       }
       const res  = await fetch(url);
       const data = await res.json();
