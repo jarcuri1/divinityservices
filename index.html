@@ -549,16 +549,31 @@
   ══════════════════════════════════════ */
   async function geocodeAddress(address, orsKey, homeCoord) {
     try {
-      let url = `https://api.openrouteservice.org/geocode/search?api_key=${orsKey}&text=${encodeURIComponent(address)}&boundary.country=US&size=1`;
-      // Bias results toward home location so ORS picks the nearby match
+      // Restrict results to a bounding box covering Connecticut + small buffer
+      // min_lon, min_lat, max_lon, max_lat
+      const CT_BBOX = { minLat: 40.95, maxLat: 42.10, minLng: -73.80, maxLng: -71.75 };
+      let url = `https://api.openrouteservice.org/geocode/search?api_key=${orsKey}&text=${encodeURIComponent(address)}&boundary.country=US&size=3`;
+      url += `&boundary.rect.min_lat=${CT_BBOX.minLat}&boundary.rect.max_lat=${CT_BBOX.maxLat}`;
+      url += `&boundary.rect.min_lon=${CT_BBOX.minLng}&boundary.rect.max_lon=${CT_BBOX.maxLng}`;
       if (homeCoord) {
         url += `&focus.point.lat=${homeCoord.lat}&focus.point.lon=${homeCoord.lng}`;
       }
       const res  = await fetch(url);
       const data = await res.json();
-      const feat = data.features?.[0];
-      if (!feat) return null;
-      return { lng: feat.geometry.coordinates[0], lat: feat.geometry.coordinates[1] };
+      // Pick the closest result to home from the top candidates
+      const feats = data.features || [];
+      if (!feats.length) return null;
+      if (!homeCoord) {
+        const f = feats[0];
+        return { lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] };
+      }
+      let best = null, bestDist = Infinity;
+      for (const f of feats) {
+        const [lng, lat] = f.geometry.coordinates;
+        const d = haversineKm(homeCoord.lat, homeCoord.lng, lat, lng);
+        if (d < bestDist) { bestDist = d; best = { lat, lng }; }
+      }
+      return best;
     } catch {
       return null;
     }
