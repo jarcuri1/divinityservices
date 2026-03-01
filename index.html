@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Snow Route Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:    #0b1320;
+      --navy2:   #111c2e;
+      --navy3:   #17253e;
+      --card:    #1a2a42;
+      --border:  #243450;
+      --orange:  #f97316;
+      --orange2: #ea6c0f;
+      --ice:     #a8d4f5;
+      --text:    #e8edf5;
+      --muted:   #7a90ad;
+      --green:   #22c55e;
+      --danger:  #ef4444;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--navy);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    .app-header {
+      background: var(--navy2);
+      border-bottom: 2px solid var(--border);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .app-logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .app-logo .snowflake { color: var(--ice); font-size: 1.3rem; }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.1rem;
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .icon-btn:hover { background: var(--card); border-color: var(--orange); }
+
+    /* ── PAGES ── */
+    .page { display: none; padding: 20px; max-width: 640px; margin: 0 auto; }
+    .page.active { display: block; }
+
+    /* ── SETUP NOTICE ── */
+    .setup-badge {
+      background: linear-gradient(135deg, var(--orange) 0%, #fb923c 100%);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .setup-badge h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 1.3rem; font-weight: 800; margin-bottom: 4px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ice);
+      margin-bottom: 14px;
+    }
+
+    /* ── FORM ── */
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      transition: border-color 0.15s;
+    }
+    input:focus { outline: none; border-color: var(--orange); }
+    input::placeholder { color: var(--muted); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 11px 22px;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--orange);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(249,115,22,0.35);
+    }
+    .btn-primary:hover { background: var(--orange2); }
+    .btn-secondary {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { border-color: var(--orange); }
+    .btn-full { width: 100%; }
+    .btn-sm { font-size: 0.85rem; padding: 7px 14px; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover { background: #16a34a; }
+
+    /* ── MAIN PAGE ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .status-home {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .status-home span { color: var(--ice); font-weight: 600; }
+    .progress-pills {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .pill {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 12px;
+      color: var(--muted);
+    }
+    .pill.done { background: rgba(34,197,94,0.15); border-color: var(--green); color: var(--green); }
+
+    .route-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    /* ── ROUTE LIST ── */
+    .route-list { list-style: none; }
+    .stop-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      transition: border-color 0.2s, opacity 0.2s;
+      position: relative;
+    }
+    .stop-item.completed {
+      opacity: 0.5;
+      border-color: var(--green);
+    }
+    .stop-item.completed .stop-address { text-decoration: line-through; color: var(--muted); }
+    .stop-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--orange);
+      min-width: 28px;
+      text-align: center;
+    }
+    .stop-item.completed .stop-num { color: var(--green); }
+    .stop-info { flex: 1; }
+    .stop-address { font-weight: 600; font-size: 0.95rem; margin-bottom: 3px; }
+    .stop-city { font-size: 0.8rem; color: var(--muted); }
+    .stop-actions { display: flex; gap: 8px; align-items: center; }
+    .checkbox-wrap {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      background: var(--navy3);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+    }
+    .checkbox-wrap:hover { border-color: var(--orange); }
+    .checkbox-wrap.checked { background: var(--green); border-color: var(--green); color: #fff; }
+
+    .navigate-btn {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--ice);
+      cursor: pointer;
+      font-size: 1rem;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .navigate-btn:hover { background: var(--orange); border-color: var(--orange); color: #fff; }
+
+    /* ── EMPTY / LOADING ── */
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .loading-spinner {
+      width: 38px; height: 38px;
+      border: 3px solid var(--border);
+      border-top-color: var(--orange);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      transition: transform 0.3s ease;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { border-color: var(--green); color: var(--green); }
+    #toast.error { border-color: var(--danger); color: var(--danger); }
+
+    /* ── SETTINGS PAGE ── */
+    .settings-section-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin: 24px 0 10px;
+    }
+    .settings-section-label:first-child { margin-top: 0; }
+    .help-text {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: -10px;
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }
+    .help-text a { color: var(--ice); }
+
+    /* ── PRINT STYLES ── */
+    @media print {
+      body { background: #fff; color: #000; }
+      .app-header, .route-actions, .stop-actions, .icon-btn, .status-bar { display: none !important; }
+      .page { display: block !important; padding: 0; }
+      .stop-item { border: 1px solid #ccc; border-radius: 4px; margin-bottom: 6px; }
+      .stop-num { color: #e55a00; }
+      .card { border: 1px solid #ddd; }
+      #page-settings, #page-main .empty-state { display: none; }
+    }
+
+    /* ── SECTION HEADER ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .stop-count-badge {
+      background: var(--orange);
+      color: #fff;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── SNOWFLAKE DIVIDER ── */
+    .divider {
+      text-align: center;
+      color: var(--border);
+      font-size: 1.2rem;
+      letter-spacing: 0.5em;
+      margin: 8px 0 20px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="app-header">
+  <div class="app-logo">
+    <span class="snowflake">❄</span>
+    SnowRoute
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="showPage('main')" title="Route">🗺️</button>
+    <button class="icon-btn" onclick="showPage('settings')" title="Settings">⚙️</button>
+  </div>
+</header>
+
+<!-- ═══ MAIN PAGE ═══ -->
+<div id="page-main" class="page active">
+
+  <div id="setup-notice" class="setup-badge" style="display:none;">
+    <h2>⚙️ Setup Required</h2>
+    First time? Open Settings to add your Google API Key and Sheet ID before planning a route.
+  </div>
+
+  <div class="status-bar">
+    <div class="status-home">🏠 Starting from: <span id="home-display">370 Leonard Road, Middlebury, CT</span></div>
+    <div class="progress-pills">
+      <div class="pill" id="pill-done">0 done</div>
+      <div class="pill" id="pill-left">0 left</div>
+    </div>
+  </div>
+
+  <div class="route-actions">
+    <button class="btn btn-primary" onclick="planRoute()" id="plan-btn">
+      ❄️ Plan My Route
+    </button>
+    <button class="btn btn-secondary" onclick="resetChecks()" title="Uncheck all stops">↺ Reset</button>
+    <button class="btn btn-secondary" onclick="window.print()" title="Print route">🖨️ Print</button>
+  </div>
+
+  <!-- Route list -->
+  <div id="route-container">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🌨️</div>
+      <h3>No route planned yet</h3>
+      <p>Hit <strong>Plan My Route</strong> to load your properties and calculate the optimal driving order.</p>
+    </div>
+
+    <div id="loading-state" style="display:none;" class="empty-state">
+      <div class="loading-spinner"></div>
+      <h3>Optimizing your route...</h3>
+      <p>Loading properties and calculating the best order</p>
+    </div>
+
+    <div id="route-result" style="display:none;">
+      <div class="section-header">
+        <div class="section-title">Optimized Stops</div>
+        <div class="stop-count-badge" id="stop-count-badge">0 stops</div>
+      </div>
+      <ul class="route-list" id="route-list"></ul>
+
+      <div style="margin-top:20px;">
+        <button class="btn btn-green btn-full" onclick="openFullRoute()">
+          🧭 Open Full Route in Google Maps
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS PAGE ═══ -->
+<div id="page-settings" class="page">
+  <div class="card">
+    <div class="card-title">🏠 Home / Starting Location</div>
+    <label for="s-home">Home Address</label>
+    <input type="text" id="s-home" placeholder="370 Leonard Road, Middlebury, CT 06762" />
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔑 Google API Key</div>
+    <p class="help-text">
+      You need a Google Cloud API key with <strong>Maps JavaScript API</strong>, <strong>Directions API</strong>, and <strong>Sheets API</strong> enabled.<br>
+      <a href="https://console.cloud.google.com/apis/credentials" target="_blank">→ Create API Key in Google Cloud Console</a>
+    </p>
+    <label for="s-apikey">API Key</label>
+    <input type="password" id="s-apikey" placeholder="AIza..." />
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Google Sheet</div>
+    <p class="help-text">
+      Open your Google Sheet and copy the ID from the URL:<br>
+      <code style="color:var(--ice);font-size:0.78rem;">docs.google.com/spreadsheets/d/<strong>[SHEET-ID]</strong>/edit</code><br><br>
+      Your sheet must be <strong>shared ("Anyone with the link can view")</strong>.
+    </p>
+    <label for="s-sheetid">Sheet ID</label>
+    <input type="text" id="s-sheetid" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" />
+
+    <label for="s-range">Address Column Range</label>
+    <input type="text" id="s-range" placeholder="Sheet1!A:A" />
+    <p class="help-text">Column range of addresses in your sheet (e.g. <code style="color:var(--ice);">Sheet1!A:A</code> or <code style="color:var(--ice);">A2:A100</code>).</p>
+  </div>
+
+  <button class="btn btn-primary btn-full" onclick="saveSettings()" style="margin-bottom:16px;">
+    💾 Save Settings
+  </button>
+  <button class="btn btn-secondary btn-full" onclick="showPage('main')">
+    ← Back to Route
+  </button>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast"></div>
+
+<!-- ═══ SCRIPT ═══ -->
+<script>
+  /* ── Storage helpers ── */
+  const LS = {
+    get: (k, def='') => localStorage.getItem('sr_'+k) ?? def,
+    set: (k, v)      => localStorage.setItem('sr_'+k, v),
+  };
+
+  /* ── Defaults ── */
+  const DEFAULTS = {
+    home:    '370 Leonard Road, Middlebury, Connecticut 06762',
+    range:   'Sheet1!A:A',
+  };
+
+  /* ── Init ── */
+  function init() {
+    document.getElementById('s-home').value    = LS.get('home', DEFAULTS.home);
+    document.getElementById('s-apikey').value  = LS.get('apikey');
+    document.getElementById('s-sheetid').value = LS.get('sheetid');
+    document.getElementById('s-range').value   = LS.get('range', DEFAULTS.range);
+
+    updateHomeDisplay();
+    updateProgress();
+    checkSetup();
+  }
+
+  function checkSetup() {
+    const missing = !LS.get('apikey') || !LS.get('sheetid');
+    document.getElementById('setup-notice').style.display = missing ? 'block' : 'none';
+  }
+
+  function updateHomeDisplay() {
+    const home = LS.get('home', DEFAULTS.home);
+    const short = home.split(',').slice(0,2).join(',');
+    document.getElementById('home-display').textContent = short;
+  }
+
+  /* ── Pages ── */
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+  }
+
+  /* ── Save Settings ── */
+  function saveSettings() {
+    const home    = document.getElementById('s-home').value.trim();
+    const apikey  = document.getElementById('s-apikey').value.trim();
+    const sheetid = document.getElementById('s-sheetid').value.trim();
+    const range   = document.getElementById('s-range').value.trim();
+
+    if (!home)    return toast('Please enter your home address', 'error');
+    if (!apikey)  return toast('Please enter your Google API Key', 'error');
+    if (!sheetid) return toast('Please enter your Google Sheet ID', 'error');
+
+    LS.set('home',    home);
+    LS.set('apikey',  apikey);
+    LS.set('sheetid', sheetid);
+    LS.set('range',   range || DEFAULTS.range);
+
+    // reset saved route if config changed
+    LS.set('route', '');
+    LS.set('checks', '');
+
+    updateHomeDisplay();
+    checkSetup();
+    toast('Settings saved!', 'success');
+    setTimeout(() => showPage('main'), 800);
+  }
+
+  /* ── Plan Route ── */
+  let optimizedAddresses = [];
+
+  async function planRoute() {
+    const apikey  = LS.get('apikey');
+    const sheetid = LS.get('sheetid');
+    const range   = LS.get('range', DEFAULTS.range);
+    const home    = LS.get('home', DEFAULTS.home);
+
+    if (!apikey || !sheetid) {
+      toast('Please configure Settings first', 'error');
+      return showPage('settings');
+    }
+
+    showLoading(true);
+
+    try {
+      // 1. Fetch addresses from Google Sheets
+      const sheetsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetid}/values/${encodeURIComponent(range)}?key=${apikey}`;
+      const res = await fetch(sheetsUrl);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Sheets API error ${res.status}`);
+      }
+      const data = await res.json();
+      const rows = data.values || [];
+
+      // Flatten & filter
+      let addresses = rows
+        .map(r => (r[0] || '').trim())
+        .filter(a => a.length > 5 && !/address/i.test(a)); // skip header
+
+      if (addresses.length === 0) throw new Error('No addresses found in your sheet. Check your range setting.');
+      if (addresses.length > 23) {
+        // Google Directions API limits to 23 waypoints
+        toast(`⚠️ Using first 23 of ${addresses.length} addresses (API limit)`, 'error');
+        addresses = addresses.slice(0, 23);
+      }
+
+      // 2. Optimize route via Directions API
+      const waypoints = addresses.map(a => encodeURIComponent(a)).join('|');
+      const dirUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(home)}&destination=${encodeURIComponent(home)}&waypoints=optimize:true|${waypoints}&key=${apikey}`;
+
+      // Since Directions API has CORS restrictions for server-side keys,
+      // we build the optimized route client-side using the Maps JS API
+      await optimizeWithMapsJS(addresses, home, apikey);
+
+    } catch (err) {
+      showLoading(false);
+      toast('Error: ' + err.message, 'error');
+      console.error(err);
+    }
+  }
+
+  function optimizeWithMapsJS(addresses, home, apikey) {
+    return new Promise((resolve, reject) => {
+      // Load Maps JS API if not already loaded
+      if (window.google && window.google.maps) {
+        doOptimize(addresses, home, resolve, reject);
+      } else {
+        window._mapsCallback = () => doOptimize(addresses, home, resolve, reject);
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apikey}&callback=_mapsCallback`;
+        script.onerror = () => reject(new Error('Failed to load Google Maps. Check your API key.'));
+        document.head.appendChild(script);
+      }
+    });
+  }
+
+  function doOptimize(addresses, home, resolve, reject) {
+    const ds = new google.maps.DirectionsService();
+    const waypoints = addresses.map(addr => ({
+      location: addr,
+      stopover: true
+    }));
+
+    ds.route({
+      origin: home,
+      destination: home,
+      waypoints,
+      optimizeWaypoints: true,
+      travelMode: google.maps.TravelMode.DRIVING
+    }, (result, status) => {
+      showLoading(false);
+      if (status === 'OK') {
+        const order = result.routes[0].waypoint_order;
+        const legs  = result.routes[0].legs;
+        optimizedAddresses = order.map(i => addresses[i]);
+        LS.set('route', JSON.stringify(optimizedAddresses));
+        LS.set('checks', JSON.stringify(new Array(optimizedAddresses.length).fill(false)));
+        renderRoute(optimizedAddresses, legs);
+        toast(`Route optimized! ${optimizedAddresses.length} stops`, 'success');
+        resolve();
+      } else {
+        reject(new Error('Directions API: ' + status + '. Check addresses are valid US addresses.'));
+      }
+    });
+  }
+
+  function showLoading(yes) {
+    document.getElementById('empty-state').style.display    = 'none';
+    document.getElementById('loading-state').style.display  = yes ? 'block' : 'none';
+    document.getElementById('route-result').style.display   = yes ? 'none' : '';
+    document.getElementById('plan-btn').disabled = yes;
+    if (yes) document.getElementById('route-result').style.display = 'none';
+  }
+
+  /* ── Render Route ── */
+  function renderRoute(addresses, legs) {
+    const list = document.getElementById('route-list');
+    const checks = JSON.parse(LS.get('checks') || '[]');
+    list.innerHTML = '';
+
+    addresses.forEach((addr, i) => {
+      const done = checks[i] || false;
+      const leg = legs ? legs[i] : null;
+      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}&travelmode=driving`;
+
+      // Split address for display
+      const parts = addr.split(',');
+      const street = parts[0]?.trim() || addr;
+      const city   = parts.slice(1).join(',').trim();
+
+      const li = document.createElement('li');
+      li.className = 'stop-item' + (done ? ' completed' : '');
+      li.id = 'stop-' + i;
+      li.innerHTML = `
+        <div class="stop-num">${i + 1}</div>
+        <div class="stop-info">
+          <div class="stop-address">${street}</div>
+          ${city ? `<div class="stop-city">${city}${leg ? ` &nbsp;·&nbsp; ${leg.distance.text}, ${leg.duration.text}` : ''}</div>` : ''}
+        </div>
+        <div class="stop-actions">
+          <a class="navigate-btn" href="${mapsUrl}" target="_blank" title="Open in Maps">🧭</a>
+          <div class="checkbox-wrap ${done ? 'checked' : ''}" onclick="toggleCheck(${i})" title="Mark complete">
+            ${done ? '✓' : ''}
+          </div>
+        </div>
+      `;
+      list.appendChild(li);
+    });
+
+    document.getElementById('stop-count-badge').textContent = `${addresses.length} stops`;
+    document.getElementById('route-result').style.display = 'block';
+    document.getElementById('loading-state').style.display = 'none';
+    updateProgress();
+  }
+
+  /* ── Toggle Check ── */
+  function toggleCheck(i) {
+    const checks = JSON.parse(LS.get('checks') || '[]');
+    checks[i] = !checks[i];
+    LS.set('checks', JSON.stringify(checks));
+
+    const item = document.getElementById('stop-' + i);
+    const box  = item.querySelector('.checkbox-wrap');
+    const done = checks[i];
+
+    item.classList.toggle('completed', done);
+    box.classList.toggle('checked', done);
+    box.innerHTML = done ? '✓' : '';
+    updateProgress();
+  }
+
+  function resetChecks() {
+    const route = JSON.parse(LS.get('route') || '[]');
+    if (!route.length) return;
+    LS.set('checks', JSON.stringify(new Array(route.length).fill(false)));
+    renderRoute(route);
+    toast('All stops unchecked', 'success');
+  }
+
+  function updateProgress() {
+    const checks = JSON.parse(LS.get('checks') || '[]');
+    const done   = checks.filter(Boolean).length;
+    const left   = checks.length - done;
+    const dEl = document.getElementById('pill-done');
+    const lEl = document.getElementById('pill-left');
+    dEl.textContent = `${done} done`;
+    dEl.className = 'pill' + (done > 0 ? ' done' : '');
+    lEl.textContent = `${left} left`;
+    lEl.className = 'pill';
+  }
+
+  /* ── Open full route in Google Maps ── */
+  function openFullRoute() {
+    const route = JSON.parse(LS.get('route') || '[]');
+    const home  = LS.get('home', DEFAULTS.home);
+    if (!route.length) return;
+
+    // Google Maps URL supports up to ~10 waypoints in URL
+    const stops = route.slice(0, 9);
+    const dest  = route[route.length - 1];
+    const wps   = stops.slice(0, -1).map(a => encodeURIComponent(a)).join('/');
+    const url   = `https://www.google.com/maps/dir/${encodeURIComponent(home)}/${wps}/${encodeURIComponent(dest)}`;
+    window.open(url, '_blank');
+  }
+
+  /* ── Toast ── */
+  let toastTimer;
+  function toast(msg, type='') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.className = '', 3500);
+  }
+
+  /* ── Restore saved route on load ── */
+  function restoreSavedRoute() {
+    const route = JSON.parse(LS.get('route') || '[]');
+    if (route.length) {
+      renderRoute(route);
+    }
+  }
+
+  /* ── Boot ── */
+  init();
+  restoreSavedRoute();
+</script>
+</body>
+</html>
