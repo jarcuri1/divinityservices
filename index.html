@@ -389,6 +389,9 @@
     orsKey:    '',
   };
 
+  // Max distance in km from home — addresses geocoded further than this are rejected
+  const MAX_DISTANCE_KM = 80;
+
   let leafletMap = null;
 
   function init() {
@@ -444,6 +447,19 @@
   }
 
   /* ══════════════════════════════════════
+     HAVERSINE DISTANCE (km)
+  ══════════════════════════════════════ */
+  function haversineKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 +
+              Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+              Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  /* ══════════════════════════════════════
      PLAN ROUTE
   ══════════════════════════════════════ */
   async function planRoute() {
@@ -476,29 +492,41 @@
 
       if (!addresses.length) throw new Error('No addresses found. Check your sheet range setting.');
 
-      // 2. Geocode home address
+      // 2. Geocode home address first (needed for focus point + distance filter)
       setLoading(true, 'Geocoding addresses...', `Finding coordinates for home + ${addresses.length} properties`);
-      const homeCoord = await geocodeAddress(home, orsKey);
+      const homeCoord = await geocodeAddress(home, orsKey, null);
       if (!homeCoord) throw new Error('Could not geocode your home address. Check it is a valid US address.');
 
-      // Geocode all stops
+      // 3. Geocode all stops — pass homeCoord so ORS focuses results nearby
       const stopResults = [];
+      const tooFar = [];
       for (let i = 0; i < addresses.length; i++) {
         setLoading(true, 'Geocoding addresses...', `${i + 1} of ${addresses.length} properties`);
-        const coord = await geocodeAddress(addresses[i], orsKey);
-        if (coord) stopResults.push({ address: addresses[i], coord });
+        const coord = await geocodeAddress(addresses[i], orsKey, homeCoord);
+        if (coord) {
+          const distKm = haversineKm(homeCoord.lat, homeCoord.lng, coord.lat, coord.lng);
+          if (distKm <= MAX_DISTANCE_KM) {
+            stopResults.push({ address: addresses[i], coord });
+          } else {
+            tooFar.push(addresses[i]);
+            console.warn(`Skipped (${distKm.toFixed(0)} km away): ${addresses[i]}`);
+          }
+        }
         await sleep(150);
       }
 
-      if (!stopResults.length) throw new Error('Could not geocode any addresses.');
-      const skipped = addresses.length - stopResults.length;
-      if (skipped > 0) toast(`⚠️ ${skipped} addresses could not be found`, 'error');
+      if (!stopResults.length) throw new Error('Could not geocode any addresses within range.');
 
-      // 3. Optimize route
+      const skippedGeo  = addresses.length - stopResults.length - tooFar.length;
+      const skippedFar  = tooFar.length;
+      if (skippedGeo > 0)  toast(`⚠️ ${skippedGeo} address(es) could not be found`, 'error');
+      if (skippedFar > 0)  toast(`⚠️ ${skippedFar} address(es) were too far away and skipped`, 'error');
+
+      // 4. Optimize route
       setLoading(true, 'Optimizing route...', `Finding fastest order for ${stopResults.length} stops`);
       const optimized = await optimizeRoute(homeCoord, stopResults, orsKey);
 
-      // 4. Save & render
+      // 5. Save & render
       LS.set('route',  JSON.stringify(optimized));
       LS.set('checks', JSON.stringify(new Array(optimized.length).fill(false)));
 
@@ -517,11 +545,15 @@
   }
 
   /* ══════════════════════════════════════
-     GEOCODE (ORS)
+     GEOCODE (ORS) — with focus point bias
   ══════════════════════════════════════ */
-  async function geocodeAddress(address, orsKey) {
+  async function geocodeAddress(address, orsKey, homeCoord) {
     try {
-      const url = `https://api.openrouteservice.org/geocode/search?api_key=${orsKey}&text=${encodeURIComponent(address)}&boundary.country=US&size=1`;
+      let url = `https://api.openrouteservice.org/geocode/search?api_key=${orsKey}&text=${encodeURIComponent(address)}&boundary.country=US&size=1`;
+      // Bias results toward home location so ORS picks the nearby match
+      if (homeCoord) {
+        url += `&focus.point.lat=${homeCoord.lat}&focus.point.lon=${homeCoord.lng}`;
+      }
       const res  = await fetch(url);
       const data = await res.json();
       const feat = data.features?.[0];
